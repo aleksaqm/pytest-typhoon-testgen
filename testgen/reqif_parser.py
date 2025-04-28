@@ -25,7 +25,7 @@ class TreeNode:
         child.parent = self
 
     def __repr__(self):
-        return f"TreeNode({self.id}, {self.label}, {self.description}, {self.priority}, {self.status}, steps={self.steps}, parameters={self.parameters}, children={len(self.children)})"
+        return f"TreeNode({self.id}, {self.label}, {self.description}, {self.type}, {self.priority}, {self.status}, steps={self.steps}, parameters={self.parameters}, children={self.children})"
 
 
 class ReqifParser:
@@ -34,7 +34,7 @@ class ReqifParser:
         self.namespace = ''
         self.spec_objects_map = {}
 
-    def parse_reqif(self):
+    def parse_reqif(self) -> list[TreeNode]:
         try:
             tree = ElementTree.parse(self.file_path)
             root = tree.getroot()
