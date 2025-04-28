@@ -12,5 +12,5 @@ def main():
     reqif_parser = ReqifParser(args.file_path)
     data = reqif_parser.parse_reqif()
 
-    print("Requirements:", data)
+    print("Requirements:", data[0].children[1].parent)
 
