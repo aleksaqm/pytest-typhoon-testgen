@@ -1,6 +1,6 @@
 import argparse
 
-from specgen.reqif_parser import ReqifParser
+from testgen.reqif_parser import ReqifParser
 
 
 def main():
@@ -12,5 +12,5 @@ def main():
     reqif_parser = ReqifParser(args.file_path)
     data = reqif_parser.parse_reqif()
 
-    print("Requirements:", data[0].children[1].parent)
+    print("Requirements:", data)
 
