@@ -21,7 +21,7 @@ import pytest
 {% for decorator in case.generate_parametrize_decorators() -%}
 {{ decorator }}
 {% endfor -%}
-def test_{{ case.label }}():
+def test_{{ case.label }}({{ case.get_parameters_names() }}):
     # TODO: Implement test
     pass
 

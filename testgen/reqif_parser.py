@@ -4,7 +4,7 @@ from typing import Optional, List, Any
 from xml.etree import ElementTree
 
 class Parameter:
-    def __init__(self, name: str, param_type: str, value: Any):
+    def __init__(self, name: str, param_type: str, value: List[Any]):
         self.name = name
         self.param_type = param_type
         self.value = value
@@ -33,11 +33,33 @@ class TreeNode:
     def generate_parametrize_decorators(self):
         decorators = []
         for param in self.parameters:
-            decorators.append(f'@pytest.mark.parametrize("{param.name}", [{param.value}])')
+            decorators.append(f'@pytest.mark.parametrize("{param.name}", {param.value})')
         return decorators
+
+    def get_parameters_names(self):
+        names : str = ""
+        for param in self.parameters:
+            names += f"{param.name},"
+        return names[:-1]
 
     def __repr__(self):
         return f"TreeNode({self.id}, {self.label}, {self.description}, {self.type}, {self.priority}, {self.status}, steps={self.steps}, parameters={self.parameters}, children={self.children})"
+
+
+def _parse_parameter(raw_param):
+    param_type = raw_param.get("type", "")
+    name = raw_param.get("name", "")
+    values = raw_param.get("value", "")
+    if param_type == "bool":
+        values = [True if value == "true" else False for value in values]
+    elif param_type == "int":
+        values = [int(value) for value in values]
+    elif param_type == "float":
+        values = [float(value) for value in values]
+    elif param_type == "array":
+        values = [json.loads(value) for value in values]
+
+    return Parameter(name, param_type, values)
 
 
 class ReqifParser:
@@ -120,15 +142,13 @@ class ReqifParser:
                             raw_parameters = json.loads(the_value)
                             if isinstance(raw_parameters, list):
                                 parameters = [
-                                    Parameter(name=param["name"], param_type=param["type"], value=param["value"])
-                                    for param in raw_parameters
+                                    _parse_parameter(param) for param in raw_parameters
                                 ]
                             else:
                                 raise ValueError("Decoded '_Parameters' JSON is not a list.")
 
                         except Exception as e:
                             print(f"Error decoding parameters JSON: {e}")
-
             node = TreeNode(
                 identifier,
                 label,
