@@ -1,11 +1,17 @@
 import re
 import json
+from typing import Optional, List, Any
 from xml.etree import ElementTree
 
+class Parameter:
+    def __init__(self, name: str, param_type: str, value: List[Any]):
+        self.name = name
+        self.param_type = param_type
+        self.value = value
 
 class TreeNode:
     def __init__(self, identifier, label, description, node_type, priority=None, status=None,
-                 steps=None, prerequisites=None, test_data=None, expected_results=None, parameters=None):
+                 steps=None, prerequisites=None, test_data=None, expected_results=None, parameters : List[Parameter] = None):
         self.id = identifier
         self.label = label
         self.description = description
@@ -17,15 +23,43 @@ class TreeNode:
         self.test_data = test_data if test_data is not None else []
         self.expected_results = expected_results if expected_results is not None else []
         self.parameters = parameters if parameters is not None else []
-        self.children = []
-        self.parent = None
+        self.children : List[TreeNode] = []
+        self.parent: Optional[TreeNode] = None
 
     def add_child(self, child):
         self.children.append(child)
         child.parent = self
 
+    def generate_parametrize_decorators(self):
+        decorators = []
+        for param in self.parameters:
+            decorators.append(f'@pytest.mark.parametrize("{param.name}", {param.value})')
+        return decorators
+
+    def get_parameters_names(self):
+        names : str = ""
+        for param in self.parameters:
+            names += f"{param.name},"
+        return names[:-1]
+
     def __repr__(self):
-        return f"TreeNode({self.id}, {self.label}, {self.description}, {self.priority}, {self.status}, steps={self.steps}, parameters={self.parameters}, children={len(self.children)})"
+        return f"TreeNode({self.id}, {self.label}, {self.description}, {self.type}, {self.priority}, {self.status}, steps={self.steps}, parameters={self.parameters}, children={self.children})"
+
+
+def _parse_parameter(raw_param):
+    param_type = raw_param.get("type", "")
+    name = raw_param.get("name", "")
+    values = raw_param.get("value", "")
+    if param_type == "bool":
+        values = [True if value == "true" else False for value in values]
+    elif param_type == "int":
+        values = [int(value) for value in values]
+    elif param_type == "float":
+        values = [float(value) for value in values]
+    elif param_type == "array":
+        values = [json.loads(value) for value in values]
+
+    return Parameter(name, param_type, values)
 
 
 class ReqifParser:
@@ -34,7 +68,7 @@ class ReqifParser:
         self.namespace = ''
         self.spec_objects_map = {}
 
-    def parse_reqif(self):
+    def parse_reqif(self) -> list[TreeNode]:
         try:
             tree = ElementTree.parse(self.file_path)
             root = tree.getroot()
@@ -105,10 +139,16 @@ class ReqifParser:
                         expected_results = the_value.split(",")
                     elif definition_ref == "_Parameters":
                         try:
-                            parameters = json.loads(the_value)
-                        except json.JSONDecodeError as e:
-                            print(f"Error decoding parameters JSON: {e}")
+                            raw_parameters = json.loads(the_value)
+                            if isinstance(raw_parameters, list):
+                                parameters = [
+                                    _parse_parameter(param) for param in raw_parameters
+                                ]
+                            else:
+                                raise ValueError("Decoded '_Parameters' JSON is not a list.")
 
+                        except Exception as e:
+                            print(f"Error decoding parameters JSON: {e}")
             node = TreeNode(
                 identifier,
                 label,
