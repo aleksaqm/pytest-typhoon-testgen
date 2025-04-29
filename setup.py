@@ -9,7 +9,7 @@ setup(
     description="Test generator based on requirements.",
     packages=find_packages(),
     python_requires='>=3.6',
-    install_requires=[],
+    install_requires=["jinja2>=3.0"],
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",
