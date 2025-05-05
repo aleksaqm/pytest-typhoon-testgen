@@ -3,6 +3,9 @@ from copy import deepcopy
 from typing import List
 from jinja2 import Template
 from testgen.reqif_parser import TreeNode
+from testgen.reqif_parser import ReqifParser
+import argparse
+import os
 from pathlib import Path
 
 
@@ -12,6 +15,8 @@ def sanitize_name(name):
 
 def generate_test_file(path: Path, test_cases: List[TreeNode], parent_requirements: List[str] = None):
     parent_requirements = parent_requirements or []
+    for test_case in test_cases:
+        print(test_case.steps)
     template = Template("""
 import pytest
 
@@ -55,7 +60,27 @@ class TestGenerator:
             parent_requirements : list[str] = []
             node_copy = deepcopy(node)
             while node_copy.parent is not None:
-                parent_requirements.append(node_copy.parent.label)
+                parent_requirements.append(node_copy.parent.id)
                 node_copy = node_copy.parent
 
             generate_test_file(file_path, test_cases, parent_requirements)
+
+def main():
+    parser = argparse.ArgumentParser(description="Parse a .reqif file and generate pytest tests.")
+    parser.add_argument('file_path', type=str, help="Path to the .reqif file")
+    parser.add_argument('output_path', type=str, nargs='?', default=os.getcwd(),
+                        help="Directory where tests will be generated (default: current working directory)")
+
+    args = parser.parse_args()
+
+    # print("Parsing .reqif file:", args.file_path)
+    # print("Generating tests into:", args.output_path)
+
+    reqif_parser = ReqifParser(args.file_path)
+    data = reqif_parser.parse_reqif()
+
+    # print("Requirements:", data)
+
+    start_path = Path(args.output_path)
+    test_generator = TestGenerator(data, start_path)
+    test_generator.generate()

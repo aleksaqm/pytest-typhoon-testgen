@@ -18,8 +18,8 @@ class TreeNode:
         self.type = node_type
         self.priority = priority
         self.status = status
-        self.steps = steps if steps is not None else []
-        self.prerequisites = prerequisites if prerequisites is not None else []
+        self.steps = steps if (steps != "" or not None) else []
+        self.prerequisites = prerequisites if (prerequisites != "" or not None) else []
         self.test_data = test_data if test_data is not None else []
         self.expected_results = expected_results if expected_results is not None else []
         self.parameters = parameters if parameters is not None else []
