@@ -9,6 +9,16 @@ class Parameter:
         self.param_type = param_type
         self.value = value
 
+    def serialize(self):
+        """
+        Serialize a Parameter object into a JSON-serializable dictionary.
+        """
+        return {
+            "name": self.name,
+            "param_type": self.param_type,
+            "value": self.value
+        }
+
 class TreeNode:
     def __init__(self, identifier, label, description, node_type, priority=None, status=None,
                  steps=None, prerequisites=None, test_data=None, expected_results=None, parameters : List[Parameter] = None):
@@ -18,8 +28,8 @@ class TreeNode:
         self.type = node_type
         self.priority = priority
         self.status = status
-        self.steps = steps if steps is not None else []
-        self.prerequisites = prerequisites if prerequisites is not None else []
+        self.steps = steps if (steps != "" or not None) else []
+        self.prerequisites = prerequisites if (prerequisites != "" or not None) else []
         self.test_data = test_data if test_data is not None else []
         self.expected_results = expected_results if expected_results is not None else []
         self.parameters = parameters if parameters is not None else []
@@ -41,6 +51,25 @@ class TreeNode:
         for param in self.parameters:
             names += f"{param.name},"
         return names[:-1]
+
+    def serialize(self):
+        """
+        Serialize a TreeNode object into a JSON-serializable dictionary.
+        """
+        return {
+            "id": self.id,
+            "label": self.label,
+            "description": self.description,
+            "type": self.type,
+            "priority": self.priority,
+            "status": self.status,
+            "steps": self.steps,
+            "prerequisites": self.prerequisites,
+            "test_data": self.test_data,
+            "expected_results": self.expected_results,
+            "parameters": [param.serialize() for param in self.parameters],  # Serialize parameters
+            "children": [child.serialize() for child in self.children]  # Recursively serialize children
+        }
 
     def __repr__(self):
         return f"TreeNode({self.id}, {self.label}, {self.description}, {self.type}, {self.priority}, {self.status}, steps={self.steps}, parameters={self.parameters}, children={self.children})"

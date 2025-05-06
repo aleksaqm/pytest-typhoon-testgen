@@ -1,30 +1,25 @@
-import argparse
-import os
-from pathlib import Path
-
-from testgen.generator import TestGenerator
-from testgen.reqif_parser import ReqifParser
+import pytest
+import allure
 
 
-def main():
-    parser = argparse.ArgumentParser(description="Parse a .reqif file and generate pytest tests.")
-    parser.add_argument('file_path', type=str, help="Path to the .reqif file")
-    parser.add_argument('output_path', type=str, nargs='?', default=os.getcwd(),
-                        help="Directory where tests will be generated (default: current working directory)")
-
-    args = parser.parse_args()
-
-    # print("Parsing .reqif file:", args.file_path)
-    # print("Generating tests into:", args.output_path)
-
-    reqif_parser = ReqifParser(args.file_path)
-    data = reqif_parser.parse_reqif()
-
-    # print("Requirements:", data)
-
-    start_path = Path(args.output_path)
-    test_generator = TestGenerator(data, start_path)
-    test_generator.generate()
+def pytest_collection_modifyitems(items):
+    for item in items:
+        meta_marker = item.get_closest_marker("meta")
+        if meta_marker:
+            item.user_properties.append(("internal_meta", meta_marker.kwargs))
+            item.own_markers = [m for m in item.own_markers if m.name != "meta"]
 
 
+def pytest_runtest_setup(item):
+    for name, value in item.user_properties:
+        if name == "internal_meta":
+            meta = value
+            allure.dynamic.id(meta.get("id", ""))
+            name = meta.get("name", "")
+            if name != "":
+                allure.dynamic.title(meta.get("name"))
+            # allure.dynamic.label("name", meta.get("name", ""))
+            allure.dynamic.label("scenario", meta.get("scenario", ""))
+            allure.dynamic.label("steps", meta.get("steps", []))
+            allure.dynamic.label("prerequisites", meta.get("prerequisites", []))
 

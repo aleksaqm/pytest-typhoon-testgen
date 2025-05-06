@@ -16,8 +16,11 @@ setup(
         "Operating System :: OS Independent",
     ],
     entry_points={
+        'pytest11': [
+            'tytest = testgen.plugin'
+        ],
         'console_scripts': [
-            'typhoon_testgen = testgen.plugin:main'
+            'typhoon_testgen = testgen.generator:main'
         ]
     }
 )
