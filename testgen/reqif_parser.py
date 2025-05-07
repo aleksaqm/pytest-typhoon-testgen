@@ -10,9 +10,6 @@ class Parameter:
         self.value = value
 
     def serialize(self):
-        """
-        Serialize a Parameter object into a JSON-serializable dictionary.
-        """
         return {
             "name": self.name,
             "param_type": self.param_type,
@@ -53,9 +50,6 @@ class TreeNode:
         return names[:-1]
 
     def serialize(self):
-        """
-        Serialize a TreeNode object into a JSON-serializable dictionary.
-        """
         return {
             "id": self.id,
             "label": self.label,
