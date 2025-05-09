@@ -3,6 +3,7 @@ import json
 from typing import Optional, List, Any
 from xml.etree import ElementTree
 
+
 class Parameter:
     def __init__(self, name: str, param_type: str, value: List[Any]):
         self.name = name
@@ -120,6 +121,35 @@ class ReqifParser:
         except Exception as e:
             print(f"Error parsing ReqIF file: {e}")
             return []
+
+    def parse_header_data(self):
+        try:
+            tree = ElementTree.parse(self.file_path)
+            root = tree.getroot()
+            self.namespace = self._get_namespace(root)
+
+            the_header = root.find(f".//{{{self.namespace}}}THE-HEADER")
+            if the_header is None:
+                return None
+
+            the_header = the_header.find(f"{{{self.namespace}}}REQ-IF-HEADER")
+
+            title = the_header.find(f"{{{self.namespace}}}TITLE")
+            title_text = title.text if title is not None else "No Title Found"
+            project_id = the_header.find(f"{{{self.namespace}}}PROJECT-ID")
+            project_text = project_id.text if project_id is not None else "No Project ID Found"
+            comment = the_header.find(f"{{{self.namespace}}}COMMENT")
+            comment_text = comment.text if comment is not None else "No Comment Found"
+
+            return {
+                "title": title_text,
+                "project_id": project_text,
+                "comment": comment_text,
+            }
+        except Exception as e:
+            print(f"Error extracting header data: {e}")
+            return None
+
 
     def _parse_spec_objects(self, spec_objects_element):
         for spec_object in spec_objects_element.findall(f"{{{self.namespace}}}SPEC-OBJECT"):

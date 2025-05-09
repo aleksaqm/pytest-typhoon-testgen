@@ -15,9 +15,12 @@ def pytest_sessionstart(session):
 def pytest_collection_modifyitems(items):
     for item in items:
         meta_marker = item.get_closest_marker("meta")
+        project_id_marker = item.get_closest_marker("project_id")
         if meta_marker:
             item.user_properties.append(("internal_meta", meta_marker.kwargs))
             item.own_markers = [m for m in item.own_markers if m.name != "meta"]
+        if project_id_marker:
+            item.user_properties.append(("project_id", project_id_marker.args[0]))
 
 def pytest_runtest_setup(item):
     global zip_file_name
@@ -26,9 +29,6 @@ def pytest_runtest_setup(item):
             meta = value
             identification = meta.get("id", "")
             allure.dynamic.id(identification)
-            if identification not in zip_file_name:
-                zip_file_name += identification
-
             name = meta.get("name", "")
             if name != "":
                 allure.dynamic.title(meta.get("name"))
@@ -36,6 +36,10 @@ def pytest_runtest_setup(item):
             allure.dynamic.label("scenario", meta.get("scenario", ""))
             allure.dynamic.label("steps", meta.get("steps", []))
             allure.dynamic.label("prerequisites", meta.get("prerequisites", []))
+        if name == "project_id":
+            project_id = value
+            allure.dynamic.label("project_id", project_id)
+            zip_file_name = project_id
 
 @pytest.hookimpl()
 def pytest_sessionfinish(session, exitstatus):
