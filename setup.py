@@ -24,7 +24,8 @@ setup(
             'tytest = testgen.plugin'
         ],
         'console_scripts': [
-            'typhoon_testgen = testgen.generator:main'
+            'typhoon_testgen = testgen.generator:main',
+            'coverage_check = testgen.coverage_check:main',
         ]
     }
 )
