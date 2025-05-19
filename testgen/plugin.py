@@ -7,12 +7,25 @@ import allure
 
 global zip_file_name
 
+def pytest_addoption(parser):
+    group = parser.getgroup('reporting')
+    group.addoption(
+        '--report',
+        action='store_true',
+        default=False,
+        help='Enable the reporting plugin'
+    )
+
+
 @pytest.hookimpl()
 def pytest_sessionstart(session):
-    global zip_file_name
-    zip_file_name = ""
+    if session.config.getoption("report"):
+        global zip_file_name
+        zip_file_name = ""
 
 def pytest_collection_modifyitems(items):
+    if not items[0].config.getoption('report'):
+        return
     for item in items:
         meta_marker = item.get_closest_marker("meta")
         project_id_marker = item.get_closest_marker("project_id")
@@ -23,6 +36,8 @@ def pytest_collection_modifyitems(items):
             item.user_properties.append(("project_id", project_id_marker.args[0]))
 
 def pytest_runtest_setup(item):
+    if not item.config.getoption('report'):
+        return
     global zip_file_name
     for name, value in item.user_properties:
         if name == "internal_meta":
@@ -43,6 +58,8 @@ def pytest_runtest_setup(item):
 
 @pytest.hookimpl()
 def pytest_sessionfinish(session, exitstatus):
+    if not session.config.getoption('report'):
+        return
     global zip_file_name
     allure_results_dir = Path("allure-html")
     zip_file_name += ".zip"
