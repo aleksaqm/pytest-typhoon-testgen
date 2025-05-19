@@ -26,8 +26,8 @@ class Difference:
     extra_folders: Set[str]
     missing_files: Set[str]
     extra_files: Set[str]
-    missing_tests: Dict[str, List[str]]
-    extra_tests: Dict[str, List[str]]
+    missing_tests: Dict[str, Dict]
+    extra_tests: Dict[str, Dict]
     modified_tests: Dict[str, Dict]
 
 
@@ -180,11 +180,13 @@ def compare_structures(existing: TestStructure, expected: TestStructure) -> Diff
         missing_files=expected.files - existing.files,
         extra_files=existing.files - expected.files,
         missing_tests={
-            file: list(expected.test_cases[file].keys() - existing.test_cases.get(file, {}).keys())
+            file: {name: expected.test_cases[file][name]
+                   for name in expected.test_cases[file].keys() - existing.test_cases.get(file, {}).keys()}
             for file in expected.files & existing.files
         },
         extra_tests={
-            file: list(existing.test_cases.get(file, {}).keys() - expected.test_cases[file].keys())
+            file: {name: existing.test_cases.get(file, {})[name]
+                   for name in existing.test_cases.get(file, {}).keys() - expected.test_cases[file].keys()}
             for file in expected.files & existing.files
         },
         modified_tests=modified_tests
