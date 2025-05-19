@@ -4,15 +4,29 @@ from pathlib import Path
 import requests
 import pytest
 import allure
+from .settings import get_settings
 
 global zip_file_name
 
+def pytest_addoption(parser):
+    group = parser.getgroup('reporting')
+    group.addoption(
+        '--report',
+        action='store_true',
+        default=False,
+        help='Enable the reporting plugin'
+    )
+
+
 @pytest.hookimpl()
 def pytest_sessionstart(session):
-    global zip_file_name
-    zip_file_name = ""
+    if session.config.getoption("report"):
+        global zip_file_name
+        zip_file_name = ""
 
 def pytest_collection_modifyitems(items):
+    if not items[0].config.getoption('report'):
+        return
     for item in items:
         meta_marker = item.get_closest_marker("meta")
         project_id_marker = item.get_closest_marker("project_id")
@@ -23,6 +37,8 @@ def pytest_collection_modifyitems(items):
             item.user_properties.append(("project_id", project_id_marker.args[0]))
 
 def pytest_runtest_setup(item):
+    if not item.config.getoption('report'):
+        return
     global zip_file_name
     for name, value in item.user_properties:
         if name == "internal_meta":
@@ -43,8 +59,10 @@ def pytest_runtest_setup(item):
 
 @pytest.hookimpl()
 def pytest_sessionfinish(session, exitstatus):
+    if not session.config.getoption('report'):
+        return
     global zip_file_name
-    allure_results_dir = Path("allure-html")
+    allure_results_dir = Path(get_settings().ALLURE_RESULTS_DIR)
     zip_file_name += ".zip"
     if allure_results_dir.exists() and allure_results_dir.is_dir():
         with zipfile.ZipFile(zip_file_name, 'w', zipfile.ZIP_DEFLATED) as zipf:
@@ -58,7 +76,7 @@ def pytest_sessionfinish(session, exitstatus):
         print("Allure results directory does not exist or is not a valid directory.")
         return
 
-    server_url = "http://localhost:8000/upload"
+    server_url = get_settings().SERVER_URL + "/upload"
     try:
         with open(zip_file_name, 'rb') as f:
             response = requests.post(server_url, files={'file': f}, timeout=30)
