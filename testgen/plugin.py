@@ -4,6 +4,7 @@ from pathlib import Path
 import requests
 import pytest
 import allure
+from .settings import get_settings
 
 global zip_file_name
 
@@ -61,7 +62,7 @@ def pytest_sessionfinish(session, exitstatus):
     if not session.config.getoption('report'):
         return
     global zip_file_name
-    allure_results_dir = Path("allure-html")
+    allure_results_dir = Path(get_settings().ALLURE_RESULTS_DIR)
     zip_file_name += ".zip"
     if allure_results_dir.exists() and allure_results_dir.is_dir():
         with zipfile.ZipFile(zip_file_name, 'w', zipfile.ZIP_DEFLATED) as zipf:
@@ -75,7 +76,7 @@ def pytest_sessionfinish(session, exitstatus):
         print("Allure results directory does not exist or is not a valid directory.")
         return
 
-    server_url = "http://localhost:8000/upload"
+    server_url = get_settings().SERVER_URL + "/upload"
     try:
         with open(zip_file_name, 'rb') as f:
             response = requests.post(server_url, files={'file': f}, timeout=30)
