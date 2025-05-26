@@ -54,8 +54,9 @@ import pytest
 {% for decorator in case.generate_parametrize_decorators() -%}
 {{ decorator }}
 {% endfor -%}
+@pytest.mark.skip(reason="Not implemented yet.")
 def test_{{ case.label.replace(" ", "_") }}({{ case.get_parameters_names() }}):
-    # TODO: Implement test
+    # TODO: Implement test and dont forget to delete @pytest.mark.skip(reason="Not implemented yet.") decorator.
     pass
 
 {% endfor -%}
