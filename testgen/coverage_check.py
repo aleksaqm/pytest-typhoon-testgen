@@ -4,7 +4,7 @@ import json
 import os
 import sys
 from pathlib import Path
-from typing import Dict, Set, List
+from typing import Dict, Set, List, Optional
 from dataclasses import dataclass
 
 from testgen import TreeNode
@@ -18,6 +18,7 @@ class TestStructure:
     folders: Set[str]
     files: Set[str]
     test_cases: Dict[str, Dict]
+    skipped_test_cases: Optional[list]
 
 
 @dataclass
@@ -35,20 +36,19 @@ def get_existing_structure(tests_path: Path) -> TestStructure:
     folders = set()
     files = set()
     test_cases = {}
-
+    skipped_test_cases = []
     for root, dirs, filenames in os.walk(tests_path):
         rel_path = Path(root).relative_to(tests_path)
         if str(rel_path) != '.':
             folders.add(str(rel_path))
-
         for filename in filenames:
             if filename.startswith('test_') and filename.endswith('.py'):
                 abs_file_path = Path(root) / filename
                 rel_file_path = abs_file_path.relative_to(tests_path)
                 files.add(str(rel_file_path))
-                test_cases[str(rel_file_path)] = parse_test_file(Path(abs_file_path))
+                test_cases[str(rel_file_path)], skipped_test_cases = parse_test_file(Path(abs_file_path))
 
-    return TestStructure(folders=folders, files=files, test_cases=test_cases)
+    return TestStructure(folders=folders, files=files, test_cases=test_cases, skipped_test_cases=skipped_test_cases)
 
 
 def get_expected_structure(reqif_path: str) -> TestStructure:
@@ -78,11 +78,12 @@ def get_expected_structure(reqif_path: str) -> TestStructure:
     for node in data:
         process_node(node, Path())
 
-    return TestStructure(folders=folders, files=files, test_cases=test_cases)
+    return TestStructure(folders=folders, files=files, test_cases=test_cases, skipped_test_cases=None)
 
 
-def parse_test_file(file_path: Path) -> Dict[str, Dict]:
+def parse_test_file(file_path: Path) -> (Dict[str, Dict], []):
     test_cases = {}
+    skipped_cases = []
     with open(file_path, 'r', encoding='utf-8') as f:
         tree = ast.parse(f.read())
 
@@ -104,7 +105,7 @@ def parse_test_file(file_path: Path) -> Dict[str, Dict]:
                                 try:
                                     params[keyword.arg] = ast.literal_eval(keyword.value)
                                 except Exception:
-                                    params[keyword.arg] = None  # fallback if literal_eval fails
+                                    params[keyword.arg] = None
                         elif marker_name == 'parametrize':
                             if decorator.args:
                                 param_name = ast.literal_eval(ast.unparse(decorator.args[0]))
@@ -115,8 +116,11 @@ def parse_test_file(file_path: Path) -> Dict[str, Dict]:
                                 if 'parameters' not in params:
                                     params['parameters'] = {}
                                 params['parameters'][param_name] = param_values
+                        elif marker_name == 'skip':
+                            skipped_cases.append(params['id'])
+
             test_cases[node.name[5:]] = params
-    return test_cases
+    return test_cases, skipped_cases
 
 
 def get_test_params(test_case_node : TreeNode) -> Dict:
@@ -169,7 +173,7 @@ def compare_structures(existing: TestStructure, expected: TestStructure) -> Diff
                 )
 
             if param_changes:
-                file_changes[test] = param_changes
+                file_changes[existing_params.get('id')] = param_changes
 
         if file_changes:
             modified_tests[file] = file_changes
@@ -216,7 +220,8 @@ def main():
         'extra_files': list(differences.extra_files),
         'missing_tests': differences.missing_tests,
         'extra_tests': differences.extra_tests,
-        'modified_tests': differences.modified_tests
+        'modified_tests': differences.modified_tests,
+        'skipped_tests': existing.skipped_test_cases,
     }
     print(json.dumps(diff_dict))
     sys.exit(0)
