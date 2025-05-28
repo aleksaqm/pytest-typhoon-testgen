@@ -46,7 +46,8 @@ def get_existing_structure(tests_path: Path) -> TestStructure:
                 abs_file_path = Path(root) / filename
                 rel_file_path = abs_file_path.relative_to(tests_path)
                 files.add(str(rel_file_path))
-                test_cases[str(rel_file_path)], skipped_test_cases = parse_test_file(Path(abs_file_path))
+                test_cases[str(rel_file_path)], new_skipped_test_cases = parse_test_file(Path(abs_file_path))
+                skipped_test_cases += new_skipped_test_cases
 
     return TestStructure(folders=folders, files=files, test_cases=test_cases, skipped_test_cases=skipped_test_cases)
 
@@ -151,18 +152,34 @@ def compare_structures(existing: TestStructure, expected: TestStructure) -> Diff
     modified_tests = {}
     for file in expected.files & existing.files:
         file_changes = {}
-        for test in (existing.test_cases.get(file, {}).keys() &
-                     expected.test_cases[file].keys()):
+        existing_tests_by_id = {
+            test_data.get('id'): (name, test_data)  # 'name' is the function name (dict key)
+            for name, test_data in existing.test_cases.get(file, {}).items()
+            if test_data.get('id') is not None
+        }
+        expected_tests_by_id = {
+            test_data.get('id'): (name, test_data)  # 'name' is the function name (dict key)
+            for name, test_data in expected.test_cases[file].items()
+            if test_data.get('id') is not None
+        }
+
+
+        for test_id in set(existing_tests_by_id.keys()) & set(expected_tests_by_id.keys()):
+            existing_name, existing_params = existing_tests_by_id[test_id]
+            expected_name, expected_params = expected_tests_by_id[test_id]
+
             param_changes = {}
-            existing_params = existing.test_cases[file][test]
-            expected_params = expected.test_cases[file][test]
+
+            if existing_name != expected_name:
+                param_changes['name'] = (existing_name, expected_name)
 
             for param in set(existing_params) | set(expected_params):
-                existing_value = normalize_value(existing_params.get(param))
-                expected_value = normalize_value(expected_params.get(param))
+                if param != 'id' and param != 'name':
+                    existing_value = normalize_value(existing_params.get(param))
+                    expected_value = normalize_value(expected_params.get(param))
 
-                if existing_value != expected_value:
-                    param_changes[param] = (existing_value, expected_value)
+                    if existing_value != expected_value:
+                        param_changes[param] = (existing_value, expected_value)
 
             existing_params_set = set(existing_params.get('parameters', []))
             expected_params_set = set(expected_params.get('parameters', []))
@@ -173,7 +190,7 @@ def compare_structures(existing: TestStructure, expected: TestStructure) -> Diff
                 )
 
             if param_changes:
-                file_changes[existing_params.get('id')] = param_changes
+                file_changes[test_id] = param_changes
 
         if file_changes:
             modified_tests[file] = file_changes
@@ -185,12 +202,16 @@ def compare_structures(existing: TestStructure, expected: TestStructure) -> Diff
         extra_files=existing.files - expected.files,
         missing_tests={
             file: {name: expected.test_cases[file][name]
-                   for name in expected.test_cases[file].keys() - existing.test_cases.get(file, {}).keys()}
+                   for name in expected.test_cases[file].keys()
+                   if expected.test_cases[file][name].get('id') not in
+                   {test.get('id') for test in existing.test_cases.get(file, {}).values()}}
             for file in expected.files & existing.files
         },
         extra_tests={
             file: {name: existing.test_cases.get(file, {})[name]
-                   for name in existing.test_cases.get(file, {}).keys() - expected.test_cases[file].keys()}
+                   for name in existing.test_cases.get(file, {}).keys()
+                   if existing.test_cases.get(file, {})[name].get('id') not in
+                   {test.get('id') for test in expected.test_cases[file].values()}}
             for file in expected.files & existing.files
         },
         modified_tests=modified_tests
@@ -225,58 +246,3 @@ def main():
     }
     print(json.dumps(diff_dict))
     sys.exit(0)
-
-
-
-
-
-
-
-
-    # Report differences
-    # if differences.missing_folders:
-    #     print("\nMissing folders:")
-    #     for folder in sorted(differences.missing_folders):
-    #         print(f"  - {folder}")
-    #
-    # if differences.extra_folders:
-    #     print("\nExtra folders:")
-    #     for folder in sorted(differences.extra_folders):
-    #         print(f"  - {folder}")
-    #
-    # if differences.missing_files:
-    #     print("\nMissing test files:")
-    #     for file in sorted(differences.missing_files):
-    #         print(f"  - {file}")
-    #
-    # if differences.extra_files:
-    #     print("\nExtra test files:")
-    #     for file in sorted(differences.extra_files):
-    #         print(f"  - {file}")
-    #
-    # if any(tests for tests in differences.missing_tests.values()):
-    #     print("\nMissing test cases:")
-    #     for file, tests in differences.missing_tests.items():
-    #         if tests:
-    #             print(f"  In {file}:")
-    #             for test in sorted(tests):
-    #                 print(f"    - {test}")
-    #
-    # if any(tests for tests in differences.extra_tests.values()):
-    #     print("\nExtra test cases:")
-    #     for file, tests in differences.extra_tests.items():
-    #         if tests:
-    #             print(f"  In {file}:")
-    #             for test in sorted(tests):
-    #                 print(f"    - {test}")
-    #
-    # if any(tests for tests in differences.modified_tests.values()):
-    #     print("\nModified test cases:")
-    #     for file, tests in differences.modified_tests.items():
-    #         if tests:
-    #             print(f"  In {file}:")
-    #             for test, params in tests.items():
-    #                 if params:
-    #                     print(f"    - {test}:")
-    #                     for param, (existing_value, expected_value) in params.items():
-    #                         print(f"      {param}: '{existing_value}' -> '{expected_value}'")
