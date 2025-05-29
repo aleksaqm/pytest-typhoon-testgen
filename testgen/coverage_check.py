@@ -118,7 +118,8 @@ def parse_test_file(file_path: Path) -> (Dict[str, Dict], []):
                                     params['parameters'] = {}
                                 params['parameters'][param_name] = param_values
                         elif marker_name == 'skip':
-                            skipped_cases.append(params['id'])
+                            if params.get('id'):
+                                skipped_cases.append(str(file_path) + "\\" + node.name[5:])
 
             test_cases[node.name[5:]] = params
     return test_cases, skipped_cases
@@ -203,16 +204,19 @@ def compare_structures(existing: TestStructure, expected: TestStructure) -> Diff
         missing_tests={
             file: {name: expected.test_cases[file][name]
                    for name in expected.test_cases[file].keys()
-                   if expected.test_cases[file][name].get('id') not in
+                   if file not in existing.test_cases or
+                   expected.test_cases[file][name].get('id') not in
                    {test.get('id') for test in existing.test_cases.get(file, {}).values()}}
-            for file in expected.files & existing.files
+            for file in expected.test_cases
         },
         extra_tests={
-            file: {name: existing.test_cases.get(file, {})[name]
-                   for name in existing.test_cases.get(file, {}).keys()
-                   if existing.test_cases.get(file, {})[name].get('id') not in
-                   {test.get('id') for test in expected.test_cases[file].values()}}
-            for file in expected.files & existing.files
+            file: {name: existing.test_cases[file][name]
+                   for name in existing.test_cases[file].keys()
+                   if not existing.test_cases[file][name].get('id') or
+                   file not in expected.test_cases or
+                   existing.test_cases[file][name].get('id') not in
+                   {test.get('id') for test in expected.test_cases.get(file, {}).values()}}
+            for file in existing.files
         },
         modified_tests=modified_tests
     )
