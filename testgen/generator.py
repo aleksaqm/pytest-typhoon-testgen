@@ -35,11 +35,6 @@ class TestGenerator:
             for child in node.children:
                 if child.type == "_TestCaseType":
                     test_cases.append(child)
-            # parent_requirements : list[str] = []
-            # node_copy = deepcopy(node)
-            # while node_copy.parent is not None:
-            #     parent_requirements.append(node_copy.parent.id)
-            #     node_copy = node_copy.parent
             self.generate_test_file(file_path, test_cases)
 
     def generate_test_file(self, path: Path, test_cases: List[TreeNode]):

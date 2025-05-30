@@ -46,7 +46,7 @@ def get_existing_structure(tests_path: Path) -> TestStructure:
                 abs_file_path = Path(root) / filename
                 rel_file_path = abs_file_path.relative_to(tests_path)
                 files.add(str(rel_file_path))
-                test_cases[str(rel_file_path)], new_skipped_test_cases = parse_test_file(Path(abs_file_path))
+                test_cases[str(rel_file_path)], new_skipped_test_cases = parse_test_file(Path(abs_file_path), rel_file_path)
                 skipped_test_cases += new_skipped_test_cases
 
     return TestStructure(folders=folders, files=files, test_cases=test_cases, skipped_test_cases=skipped_test_cases)
@@ -82,7 +82,7 @@ def get_expected_structure(reqif_path: str) -> TestStructure:
     return TestStructure(folders=folders, files=files, test_cases=test_cases, skipped_test_cases=None)
 
 
-def parse_test_file(file_path: Path) -> (Dict[str, Dict], []):
+def parse_test_file(file_path: Path, rel_file_path: Path) -> (Dict[str, Dict], []):
     test_cases = {}
     skipped_cases = []
     with open(file_path, 'r', encoding='utf-8') as f:
@@ -118,8 +118,11 @@ def parse_test_file(file_path: Path) -> (Dict[str, Dict], []):
                                     params['parameters'] = {}
                                 params['parameters'][param_name] = param_values
                         elif marker_name == 'skip':
-                            if params.get('id'):
-                                skipped_cases.append(str(file_path) + "\\" + node.name[5:])
+                            # params['skipped'] = True
+                            skipped_cases.append(str(rel_file_path) + "\\" + node.name[5:])
+                            # if params.get('id'):
+                            #     skipped_cases.append(str(file_path) + "\\" + node.name[5:])
+
 
             test_cases[node.name[5:]] = params
     return test_cases, skipped_cases
@@ -164,7 +167,6 @@ def compare_structures(existing: TestStructure, expected: TestStructure) -> Diff
             if test_data.get('id') is not None
         }
 
-
         for test_id in set(existing_tests_by_id.keys()) & set(expected_tests_by_id.keys()):
             existing_name, existing_params = existing_tests_by_id[test_id]
             expected_name, expected_params = expected_tests_by_id[test_id]
@@ -205,20 +207,18 @@ def compare_structures(existing: TestStructure, expected: TestStructure) -> Diff
             file: {name: expected.test_cases[file][name]
                    for name in expected.test_cases[file].keys()
                    if file not in existing.test_cases or
-                   expected.test_cases[file][name].get('id') not in
-                   {test.get('id') for test in existing.test_cases.get(file, {}).values()}}
+                   name not in existing.test_cases.get(file, {})}
             for file in expected.test_cases
         },
         extra_tests={
             file: {name: existing.test_cases[file][name]
                    for name in existing.test_cases[file].keys()
-                   if not existing.test_cases[file][name].get('id') or
-                   file not in expected.test_cases or
-                   existing.test_cases[file][name].get('id') not in
-                   {test.get('id') for test in expected.test_cases.get(file, {}).values()}}
+                   if file not in expected.test_cases or
+                   name not in expected.test_cases[file]}
             for file in existing.files
         },
-        modified_tests=modified_tests
+
+        modified_tests=modified_tests,
     )
 
 
