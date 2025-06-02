@@ -12,7 +12,8 @@ setup(
     install_requires=["jinja2>=3.0",
                       "pydantic>=2.0.0",
                       "python-dotenv>=0.19.0",
-                      "pydantic-settings>=2.0.0"
+                      "pydantic-settings>=2.0.0",
+                      "gitignore_parser>=0.1.12",
                       ],
     classifiers=[
         "Programming Language :: Python :: 3",

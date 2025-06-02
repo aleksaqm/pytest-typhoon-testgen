@@ -6,23 +6,34 @@ from jinja2 import Template
 
 from testgen import ReqifParser, TreeNode
 from testgen.generator import TestGenerator, sanitize_name
+from gitignore_parser import parse_gitignore
 
 
-def update_tests(test_generator: TestGenerator):
+def update_tests(test_generator: TestGenerator, matches):
     path = test_generator.path
     for node in test_generator.nodes:
-        update_requirement_node(node, test_generator, path)
+        update_requirement_node(node, test_generator, path, matches)
 
 
-def update_requirement_node(node, test_generator: TestGenerator, path: Path):
+def update_requirement_node(node, test_generator: TestGenerator, path: Path, matches):
     if node.type == "_RequirementType":
         folder_path = Path.joinpath(path, sanitize_name(node.label))
+        print("PAZIIIIII")
+        print(folder_path)
+        print(matches(folder_path))
+
         if not folder_path.exists():
-            folder_path.mkdir(parents=True, exist_ok=True)
+            if not matches(folder_path):
+                folder_path.mkdir(parents=True, exist_ok=True)
         for child in node.children:
-            update_requirement_node(child, test_generator, folder_path)
+            update_requirement_node(child, test_generator, folder_path, matches)
     elif node.type == "_TestType":
         file_path = Path.joinpath(path, f"test_{sanitize_name(node.label)}.py")
+        print("VIIPRAAA")
+        print(file_path)
+        print(matches(file_path))
+        if matches(file_path):
+            return
         test_cases = []
         for child in node.children:
             if child.type == "_TestCaseType":
@@ -126,11 +137,23 @@ def main():
     parser = argparse.ArgumentParser(description="Check test coverage against reqif file")
     parser.add_argument('reqif_path', type=str, help="Path to the .reqif file")
     parser.add_argument('tests_path', type=str, help="Path to the tests directory")
+    parser.add_argument('ignore_file', type=str, help="Path to the ignore file", nargs='?', default=None,)
 
     args = parser.parse_args()
 
     reqif_path = Path(args.reqif_path)
     tests_path = Path(args.tests_path)
+
+    matches = None
+    if args.ignore_file:
+        ignore_file = Path(args.ignore_file)
+        if ignore_file.exists():
+            ignore_dir = ignore_file.parent
+            print(ignore_file)
+            matches = parse_gitignore(ignore_file, base_dir=ignore_dir)
+
+            # abs_path1 = Path(str(ignore_dir)  + "\\trajko\\buca_req\\test_kasa_test.py")
+            # print("Matched?", matches(abs_path1))
 
     if not reqif_path.exists():
         print(f"Error: Reqif path '{reqif_path}' does not exist")
@@ -146,4 +169,4 @@ def main():
 
     test_generator = TestGenerator(data, tests_path, header_data["project_id"])
 
-    update_tests(test_generator)
+    update_tests(test_generator, matches)
