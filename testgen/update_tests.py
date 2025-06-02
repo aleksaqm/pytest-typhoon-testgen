@@ -1,5 +1,4 @@
 import argparse
-import ast
 from pathlib import Path
 from typing import List
 
@@ -42,33 +41,50 @@ def update_test_file(file_path: Path, test_cases: List[TreeNode], test_generator
     existing_functions = {}
     current_func = None
     func_content = []
+    full_func_block = []
     has_skip = False
 
-    for line in content.splitlines():
-        if line.strip().startswith('@pytest.mark.skip'):
-            has_skip = True
-        elif line.strip().startswith('def test_'):
-            current_func = line.strip().split('def ')[1].split('(')[0]
-            func_content = []
-        elif current_func:
+    lines = content.splitlines()
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+        if current_func:
             if line and not line.startswith(' ') and not line.startswith('\t'):
                 existing_functions[current_func] = {
                     'body': '\n'.join(func_content),
-                    'has_skip': has_skip
+                    'has_skip': has_skip,
+                    'full_block': '\n'.join(full_func_block)
                 }
                 current_func = None
                 has_skip = False
-            else:
-                func_content.append(line)
+                full_func_block = []
+        if line.strip().startswith('@'):
+            if current_func is None:
+                if len(full_func_block) > 0:
+                    full_func_block.append(line)
+                else:
+                    full_func_block = [line]
+            if line.strip().startswith('@pytest.mark.skip'):
+                has_skip = True
+        elif line.strip().startswith('def test_'):
+            current_func = line.strip().split('def ')[1].split('(')[0]
+            full_func_block.append(line)
+            func_content = []
+        else:
+            func_content.append(line)
+            full_func_block.append(line)
+        i += 1
 
     if current_func:
         existing_functions[current_func] = {
             'body': '\n'.join(func_content),
-            'has_skip': has_skip
+            'has_skip': has_skip,
+            'full_block': '\n'.join(full_func_block)
         }
 
-    update_template = Template("""
-import pytest
+    test_case_names = [f"test_{case.label.replace(' ', '_')}" for case in test_cases]
+
+    update_template = Template("""import pytest
 
 {% for case in test_cases -%}
 @pytest.mark.project_id("{{ project_id }}")
@@ -77,7 +93,7 @@ import pytest
 {%- for decorator in case.generate_parametrize_decorators() %}
 {{ decorator }}
 {%- endfor %}
-{%- if func_name in existing_functions and existing_functions[func_name]['has_skip'] %}
+{%- if (func_name in existing_functions and existing_functions[func_name]['has_skip']) or (func_name not in existing_functions) %}
 @pytest.mark.skip(reason="Not implemented yet.")
 {%- endif %}
 def {{ func_name }}({{ case.get_parameters_names() }}):
@@ -89,12 +105,18 @@ def {{ func_name }}({{ case.get_parameters_names() }}):
 {%- endif %}
 
 {% endfor -%}
-    """)
+{%- for func_name, func_info in existing_functions.items() %}
+{%- if func_name not in test_case_names %}
+{{ func_info['full_block'] }}
+
+{% endif -%}
+{%- endfor -%}""")
 
     content = update_template.render(
         test_cases=test_cases,
         project_id=test_generator.project_id,
-        existing_functions=existing_functions
+        existing_functions=existing_functions,
+        test_case_names=test_case_names
     )
 
     file_path.write_text(content, encoding='utf-8')
