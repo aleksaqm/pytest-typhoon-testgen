@@ -137,23 +137,16 @@ def main():
     parser = argparse.ArgumentParser(description="Check test coverage against reqif file")
     parser.add_argument('reqif_path', type=str, help="Path to the .reqif file")
     parser.add_argument('tests_path', type=str, help="Path to the tests directory")
-    parser.add_argument('ignore_file', type=str, help="Path to the ignore file", nargs='?', default=None,)
 
     args = parser.parse_args()
 
     reqif_path = Path(args.reqif_path)
     tests_path = Path(args.tests_path)
 
+    ignore_file_path = tests_path / '.typhoonignore'
     matches = None
-    if args.ignore_file:
-        ignore_file = Path(args.ignore_file)
-        if ignore_file.exists():
-            ignore_dir = ignore_file.parent
-            print(ignore_file)
-            matches = parse_gitignore(ignore_file, base_dir=ignore_dir)
-
-            # abs_path1 = Path(str(ignore_dir)  + "\\trajko\\buca_req\\test_kasa_test.py")
-            # print("Matched?", matches(abs_path1))
+    if ignore_file_path.exists():
+        matches = parse_gitignore(ignore_file_path, base_dir=tests_path)
 
     if not reqif_path.exists():
         print(f"Error: Reqif path '{reqif_path}' does not exist")

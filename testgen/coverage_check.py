@@ -34,18 +34,22 @@ class Difference:
     modified_tests: Dict[str, Dict]
 
 
-def get_existing_structure(tests_path: Path) -> TestStructure:
+def get_existing_structure(tests_path: Path, matches) -> TestStructure:
     folders = set()
     files = set()
     test_cases = {}
     skipped_test_cases = []
     for root, dirs, filenames in os.walk(tests_path):
+        if matches and matches(root):
+            continue
         rel_path = Path(root).relative_to(tests_path)
         if str(rel_path) != '.':
             folders.add(str(rel_path))
         for filename in filenames:
             if filename.startswith('test_') and filename.endswith('.py'):
                 abs_file_path = Path(root) / filename
+                if matches and matches(abs_file_path):
+                    continue
                 rel_file_path = abs_file_path.relative_to(tests_path)
                 files.add(str(rel_file_path))
                 test_cases[str(rel_file_path)], new_skipped_test_cases = parse_test_file(Path(abs_file_path), rel_file_path)
@@ -54,7 +58,7 @@ def get_existing_structure(tests_path: Path) -> TestStructure:
     return TestStructure(folders=folders, files=files, test_cases=test_cases, skipped_test_cases=skipped_test_cases)
 
 
-def get_expected_structure(reqif_path: str) -> TestStructure:
+def get_expected_structure(reqif_path: str, matches, ignore_dir : Path) -> TestStructure:
     parser = ReqifParser(reqif_path)
     data = parser.parse_reqif()
 
@@ -65,12 +69,15 @@ def get_expected_structure(reqif_path: str) -> TestStructure:
     def process_node(node, current_path: Path):
         if node.type == "_RequirementType":
             folder_name = sanitize_name(node.label)
-            folders.add(str(current_path / folder_name))
+            if not matches or not matches(str(ignore_dir) + "\\" + str(current_path / folder_name)):
+                folders.add(str(current_path / folder_name))
             for child in node.children:
                 process_node(child, current_path / folder_name)
         elif node.type == "_TestType":
             file_name = f"test_{sanitize_name(node.label)}.py"
             file_path = str(current_path / file_name)
+            if matches and matches(str(ignore_dir) + "\\" + file_path):
+                return
             files.add(file_path)
             test_cases[file_path] = {
                 sanitize_name(child.label): get_test_params(child)
@@ -120,10 +127,7 @@ def parse_test_file(file_path: Path, rel_file_path: Path) -> (Dict[str, Dict], [
                                     params['parameters'] = {}
                                 params['parameters'][param_name] = param_values
                         elif marker_name == 'skip':
-                            # params['skipped'] = True
                             skipped_cases.append(str(rel_file_path) + "\\" + node.name[5:])
-                            # if params.get('id'):
-                            #     skipped_cases.append(str(file_path) + "\\" + node.name[5:])
 
 
             test_cases[node.name[5:]] = params
@@ -228,7 +232,6 @@ def main():
     parser = argparse.ArgumentParser(description="Check test coverage against reqif file")
     parser.add_argument('reqif_path', type=str, help="Path to the .reqif file")
     parser.add_argument('tests_path', type=str, help="Path to the tests directory")
-    parser.add_argument('ignore_file', type=str, help="Path to the ignore file", nargs='?', default=None,)
 
 
     args = parser.parse_args()
@@ -238,16 +241,14 @@ def main():
         print(f"Error: Tests path '{tests_path}' does not exist")
         return
 
+    ignore_file_path = tests_path / '.typhoonignore'
     matches = None
-    if args.ignore_file:
-        ignore_file = Path(args.ignore_file)
-        if ignore_file.exists():
-            ignore_dir = ignore_file.parent
-            print(ignore_file)
-            matches = parse_gitignore(ignore_file, base_dir=ignore_dir)
+    if ignore_file_path.exists():
+        matches = parse_gitignore(ignore_file_path, base_dir=tests_path)
 
-    existing = get_existing_structure(tests_path)
-    expected = get_expected_structure(args.reqif_path)
+
+    existing = get_existing_structure(tests_path, matches)
+    expected = get_expected_structure(args.reqif_path, matches, tests_path)
 
     differences = compare_structures(existing, expected)
     diff_dict = {
