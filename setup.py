@@ -15,9 +15,8 @@ setup(
                       "pydantic-settings>=2.0.0",
                       "gitignore_parser>=0.1.12",
                       "pytest>=8.3.0",
-                      "allure-pytest>=2.14.1",
+                      "allure-pytest>=2.13.1",
                       "requests>=2.32.0",
-                      "setuptools>=80.0.0",
                       "allure-python-commons>=2.14.1",
                       "testgen>=0.3"
                       ],
