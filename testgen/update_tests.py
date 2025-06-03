@@ -59,6 +59,9 @@ def update_test_file(file_path: Path, test_cases: List[TreeNode], test_generator
     i = 0
     while i < len(lines):
         line = lines[i]
+        if line.strip().startswith('import '):
+            i += 1
+            continue
         if current_func:
             if line and not line.startswith(' ') and not line.startswith('\t'):
                 existing_functions[current_func] = {
