@@ -12,7 +12,14 @@ setup(
     install_requires=["jinja2>=3.0",
                       "pydantic>=2.0.0",
                       "python-dotenv>=0.19.0",
-                      "pydantic-settings>=2.0.0"
+                      "pydantic-settings>=2.0.0",
+                      "gitignore_parser>=0.1.12",
+                      "pytest>=8.3.0",
+                      "allure-pytest>=2.14.1",
+                      "requests>=2.32.0",
+                      "setuptools>=80.0.0",
+                      "allure-python-commons>=2.14.1",
+                      "testgen>=0.3"
                       ],
     classifiers=[
         "Programming Language :: Python :: 3",
@@ -24,7 +31,9 @@ setup(
             'tytest = testgen.plugin'
         ],
         'console_scripts': [
-            'typhoon_testgen = testgen.generator:main'
+            'typhoon_testgen = testgen.generator:main',
+            'coverage_check = testgen.coverage_check:main',
+            'typhoon_test_update = testgen.update_tests:main'
         ]
     }
 )

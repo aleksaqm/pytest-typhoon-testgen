@@ -19,7 +19,7 @@ class Parameter:
 
 class TreeNode:
     def __init__(self, identifier, label, description, node_type, priority=None, status=None,
-                 steps=None, prerequisites=None, test_data=None, expected_results=None, parameters : List[Parameter] = None):
+                 steps=None, prerequisites=None, parameters : List[Parameter] = None):
         self.id = identifier
         self.label = label
         self.description = description
@@ -28,8 +28,6 @@ class TreeNode:
         self.status = status
         self.steps = steps if (steps != "" or not None) else []
         self.prerequisites = prerequisites if (prerequisites != "" or not None) else []
-        self.test_data = test_data if test_data is not None else []
-        self.expected_results = expected_results if expected_results is not None else []
         self.parameters = parameters if parameters is not None else []
         self.children : List[TreeNode] = []
         self.parent: Optional[TreeNode] = None
@@ -60,8 +58,6 @@ class TreeNode:
             "status": self.status,
             "steps": self.steps,
             "prerequisites": self.prerequisites,
-            "test_data": self.test_data,
-            "expected_results": self.expected_results,
             "parameters": [param.serialize() for param in self.parameters],  # Serialize parameters
             "children": [child.serialize() for child in self.children]  # Recursively serialize children
         }
@@ -164,8 +160,6 @@ class ReqifParser:
             status = ""
             steps = []
             prerequisites = []
-            test_data = []
-            expected_results = []
             parameters = []
 
             if values:
@@ -186,10 +180,6 @@ class ReqifParser:
                         steps = the_value.split(",")
                     elif definition_ref == "_Prerequisites":
                         prerequisites = the_value.split(",")
-                    elif definition_ref == "_TestData":
-                        test_data = the_value.split(",")
-                    elif definition_ref == "_ExpectedResults":
-                        expected_results = the_value.split(",")
                     elif definition_ref == "_Parameters":
                         try:
                             raw_parameters = json.loads(the_value)
@@ -211,8 +201,6 @@ class ReqifParser:
                 status,
                 steps=steps,
                 prerequisites=prerequisites,
-                test_data=test_data,
-                expected_results=expected_results,
                 parameters=parameters
             )
 

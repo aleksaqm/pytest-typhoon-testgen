@@ -35,12 +35,6 @@ class TestGenerator:
             for child in node.children:
                 if child.type == "_TestCaseType":
                     test_cases.append(child)
-            # parent_requirements : list[str] = []
-            # node_copy = deepcopy(node)
-            # while node_copy.parent is not None:
-            #     parent_requirements.append(node_copy.parent.id)
-            #     node_copy = node_copy.parent
-
             self.generate_test_file(file_path, test_cases)
 
     def generate_test_file(self, path: Path, test_cases: List[TreeNode]):
@@ -50,12 +44,13 @@ import pytest
 
 {% for case in test_cases -%}
 @pytest.mark.project_id("{{ project_id }}")
-@pytest.mark.meta(id="{{ case.id }}", name="{{ case.label }}", scenario="{{ case.description }}", steps="{{ case.steps }}", prerequisites="{{ case.prerequisites }}")
+@pytest.mark.meta(id="{{ case.id }}", scenario="{{ case.description }}", steps="{{ case.steps }}", prerequisites="{{ case.prerequisites }}")
 {% for decorator in case.generate_parametrize_decorators() -%}
 {{ decorator }}
 {% endfor -%}
+@pytest.mark.skip(reason="Not implemented yet.")
 def test_{{ case.label.replace(" ", "_") }}({{ case.get_parameters_names() }}):
-    # TODO: Implement test
+    # TODO: Implement test and dont forget to delete @pytest.mark.skip(reason="Not implemented yet.") decorator.
     pass
 
 {% endfor -%}
@@ -71,14 +66,10 @@ def main():
 
     args = parser.parse_args()
 
-    # print("Parsing .reqif file:", args.file_path)
-    # print("Generating tests into:", args.output_path)
-
     reqif_parser = ReqifParser(args.file_path)
     data = reqif_parser.parse_reqif()
     header_data = reqif_parser.parse_header_data()
 
-    # print("Requirements:", data)
     start_path = Path(args.output_path)
     test_generator = TestGenerator(data, start_path, header_data["project_id"])
     test_generator.generate()
