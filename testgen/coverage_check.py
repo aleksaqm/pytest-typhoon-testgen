@@ -6,11 +6,8 @@ import sys
 from pathlib import Path
 from typing import Dict, Set, List, Optional
 from dataclasses import dataclass
-
 from gitignore_parser import parse_gitignore
-
 from testgen import TreeNode
-
 from testgen.reqif_parser import ReqifParser
 from testgen.generator import sanitize_name
 

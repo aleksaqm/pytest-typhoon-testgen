@@ -1,9 +1,7 @@
 import argparse
 from pathlib import Path
 from typing import List
-
 from jinja2 import Template
-
 from testgen import ReqifParser, TreeNode
 from testgen.generator import TestGenerator, sanitize_name
 from gitignore_parser import parse_gitignore
@@ -18,10 +16,6 @@ def update_tests(test_generator: TestGenerator, matches):
 def update_requirement_node(node, test_generator: TestGenerator, path: Path, matches):
     if node.type == "_RequirementType":
         folder_path = Path.joinpath(path, sanitize_name(node.label))
-        print("PAZIIIIII")
-        print(folder_path)
-        print(matches(folder_path))
-
         if not folder_path.exists():
             if not matches(folder_path):
                 folder_path.mkdir(parents=True, exist_ok=True)
@@ -29,9 +23,6 @@ def update_requirement_node(node, test_generator: TestGenerator, path: Path, mat
             update_requirement_node(child, test_generator, folder_path, matches)
     elif node.type == "_TestType":
         file_path = Path.joinpath(path, f"test_{sanitize_name(node.label)}.py")
-        print("VIIPRAAA")
-        print(file_path)
-        print(matches(file_path))
         if matches(file_path):
             return
         test_cases = []
