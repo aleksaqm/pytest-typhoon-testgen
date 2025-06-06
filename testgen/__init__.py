@@ -1,2 +1,3 @@
 from .reqif_parser import Parameter, TreeNode, ReqifParser
-from plugin import upload_allure_report
+from . import plugin
+from .plugin import upload_allure_report
