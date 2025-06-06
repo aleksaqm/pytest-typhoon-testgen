@@ -68,28 +68,22 @@ def pytest_runtest_makereport(item, call):
     _process_allure_metadata(item)
 
 
-@pytest.hookimpl()
-def pytest_sessionfinish(session, exitstatus):
-    if not session.config.getoption('report'):
-        return
-    global zip_file_name
-    allure_results_dir = Path(get_settings().ALLURE_RESULTS_DIR)
-    zip_file_name += ".zip"
+def upload_allure_report(zip_name, server_url, allure_results_dir):
     if allure_results_dir.exists() and allure_results_dir.is_dir():
-        with zipfile.ZipFile(zip_file_name, 'w', zipfile.ZIP_DEFLATED) as zipf:
+        with zipfile.ZipFile(zip_name, 'w', zipfile.ZIP_DEFLATED) as zipf:
             for root, _, files in os.walk(allure_results_dir):
                 for file in files:
                     file_path = os.path.join(root, file)
                     arcname = os.path.relpath(file_path, allure_results_dir)
                     zipf.write(file_path, arcname)
-        print(f"Successfully created ZIP file: {zip_file_name}")
+        print(f"Successfully created ZIP file: {zip_name}")
     else:
         print("Allure results directory does not exist or is not a valid directory.")
         return
 
-    server_url = get_settings().SERVER_URL + "/upload"
+    server_url = server_url + "/upload"
     try:
-        with open(zip_file_name, 'rb') as f:
+        with open(zip_name, 'rb') as f:
             response = requests.post(server_url, files={'file': f}, timeout=30)
         if response.status_code == 200:
             print("Allure ZIP file successfully uploaded to the server.")
@@ -97,5 +91,16 @@ def pytest_sessionfinish(session, exitstatus):
             print(f"Failed to upload file. Server responded with status code: {response.status_code}")
     except Exception as e:
         print(f"An error occurred while uploading the file: {e}")
+
+
+
+@pytest.hookimpl()
+def pytest_sessionfinish(session, exitstatus):
+    if not session.config.getoption('report'):
+        return
+    global zip_file_name
+    allure_results_dir = Path(get_settings().ALLURE_RESULTS_DIR)
+    zip_file_name += ".zip"
+    upload_allure_report(zip_file_name, get_settings().SERVER_URL, allure_results_dir)
 
 
