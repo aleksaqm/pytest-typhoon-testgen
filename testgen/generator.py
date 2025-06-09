@@ -9,7 +9,7 @@ from pathlib import Path
 
 
 def sanitize_name(name):
-    name.replace(" ", "_")
+    name.replace(" ", "_").lower()
     return re.sub(r'\W|^(?=\d)', '_', name)
 
 
@@ -30,7 +30,7 @@ class TestGenerator:
             for child in node.children:
                 self.walk_tree(child, new_dir)
         elif node.type == "_TestType":
-            file_path = current_path / f"test_{sanitize_name(node.label)}.py"
+            file_path = current_path / f"test_{sanitize_name(node.label.lower())}.py"
             test_cases = []
             for child in node.children:
                 if child.type == "_TestCaseType":
@@ -49,7 +49,7 @@ import pytest
 {{ decorator }}
 {% endfor -%}
 @pytest.mark.skip(reason="Not implemented yet.")
-def test_{{ case.label.replace(" ", "_") }}({{ case.get_parameters_names() }}):
+def test_{{ case.label.replace(" ", "_").lower() }}({{ case.get_parameters_names() }}):
     # TODO: Implement test and dont forget to delete @pytest.mark.skip(reason="Not implemented yet.") decorator.
     pass
 

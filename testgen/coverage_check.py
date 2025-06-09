@@ -71,13 +71,13 @@ def get_expected_structure(reqif_path: str, matches, ignore_dir : Path) -> TestS
             for child in node.children:
                 process_node(child, current_path / folder_name)
         elif node.type == "_TestType":
-            file_name = f"test_{sanitize_name(node.label)}.py"
+            file_name = f"test_{sanitize_name(node.label.lower())}.py"
             file_path = str(current_path / file_name)
             if matches and matches(str(ignore_dir) + "\\" + file_path):
                 return
             files.add(file_path)
             test_cases[file_path] = {
-                sanitize_name(child.label): get_test_params(child)
+                sanitize_name(child.label.lower()): get_test_params(child)
                 for child in node.children
                 if child.type == "_TestCaseType"
             }
