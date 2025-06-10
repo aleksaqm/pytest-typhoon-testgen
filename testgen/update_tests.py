@@ -72,7 +72,7 @@ def update_test_file(file_path: Path, test_cases: List[TreeNode], test_generator
             if line.strip().startswith('@pytest.mark.skip'):
                 has_skip = True
         elif line.strip().startswith('def test_'):
-            current_func = line.strip().split('def ')[1].split('(')[0]
+            current_func = line.strip().split('def ')[1].split('(')[0].lower()
             full_func_block.append(line)
             func_content = []
         else:
@@ -87,7 +87,7 @@ def update_test_file(file_path: Path, test_cases: List[TreeNode], test_generator
             'full_block': '\n'.join(full_func_block)
         }
 
-    test_case_names = [f"test_{case.label.replace(' ', '_')}" for case in test_cases]
+    test_case_names = [f"test_{case.label.lower().replace(' ', '_')}" for case in test_cases]
 
     update_template = Template("""import pytest
 
@@ -101,7 +101,7 @@ def update_test_file(file_path: Path, test_cases: List[TreeNode], test_generator
 {%- if (func_name in existing_functions and existing_functions[func_name]['has_skip']) or (func_name not in existing_functions) %}
 @pytest.mark.skip(reason="Not implemented yet.")
 {%- endif %}
-def {{ func_name }}({{ case.get_parameters_names() }}):
+def {{ func_name.lower() }}({{ case.get_parameters_names() }}):
 {%- if func_name in existing_functions %}
 {{ existing_functions[func_name]['body'] }}
 {%- else %}
