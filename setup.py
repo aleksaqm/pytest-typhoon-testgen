@@ -6,7 +6,7 @@ setup(
     author = "Aleksa Perovic",
     author_email="aleksa.perovic@typhoon-hil.com",
     url="https://github.com/aleksaqm/pytest-typhoon-testgen",
-    description="Test generator based on requirements.",
+    description="Test generator/updater based on requirements.",
     packages=find_packages(),
     python_requires='>=3.6',
     install_requires=["jinja2>=3.0",
@@ -18,7 +18,6 @@ setup(
                       "allure-pytest>=2.13.1",
                       "requests>=2.32.0",
                       "allure-python-commons>=2.14.1",
-                      "testgen>=0.3"
                       ],
     classifiers=[
         "Programming Language :: Python :: 3",
