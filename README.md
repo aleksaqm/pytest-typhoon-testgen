@@ -86,9 +86,16 @@ Enable the reporting plugin when running pytest.
 ```
 pytest --report
 ```
-- After test execution, Allure results are zipped and uploaded to the configured server.
+- After test execution, Allure results are updated to have data from test function decorators.
+```
+pytest --upload
+```
+- After test execution desired folder will be zipped and uploaded to the configured server.
+```
+pytest --report --upload
+```
+- Combination -> For doing everything at once
 - Server URL and Allure results directory are configurable via environment variables or ``.env`` file.
-
 
 ---
 
