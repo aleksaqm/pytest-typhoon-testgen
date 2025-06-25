@@ -8,29 +8,29 @@
 
 ## Features
 
-### ✅ Automated Test Generation
+### Automated Test Generation
 
 - Generate `pytest`-compatible test folders, files, and test functions directly from ReqIF requirement files.
 - Ensures your test suite structure mirrors your requirements hierarchy.
 
-### 🔁 Test Update & Synchronization
+### Test Update & Synchronization
 
 - Update existing test files and functions to stay in sync with evolving requirements.
 - Automatically adds new tests, updates existing ones, and marks obsolete tests.
 
-### 📊 Coverage Analysis
+### Coverage Analysis
 
 - Compare your current test suite against the requirements in a ReqIF file.
 - Identify missing, extra, or outdated tests and folders.
 - Ensure full traceability and coverage.
 
-### 📦 Allure Reporting Integration
+### Allure Reporting Integration
 
 - Automatically collects Allure test results after test execution.
 - Packages them into a ZIP archive and uploads to a configurable server endpoint.
 - Server URL and Allure results directory are configurable via environment variables or a `.env` file.
 
-### ⚙️ Customizable Ignore Rules
+###  Customizable Ignore Rules
 
 - Supports `.typhoonignore` files to exclude specific files or directories from generation, updating, or coverage checks.
 
