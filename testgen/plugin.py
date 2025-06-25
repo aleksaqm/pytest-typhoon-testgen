@@ -1,3 +1,4 @@
+import json
 import os
 import zipfile
 from pathlib import Path
@@ -16,13 +17,19 @@ def pytest_addoption(parser):
         default=False,
         help='Enable the reporting plugin'
     )
+    group.addoption(
+        '--upload',
+        action='store_true',
+        default=False,
+        help='Enable uploading report to server'
+    )
 
 
 @pytest.hookimpl()
 def pytest_sessionstart(session):
-    if session.config.getoption("report"):
+    if session.config.getoption("report") or session.config.getoption("upload"):
         global zip_file_name
-        zip_file_name = ""
+        zip_file_name = "report"
 
 def pytest_collection_modifyitems(items):
     if not items[0].config.getoption('report'):
@@ -92,14 +99,36 @@ def upload_allure_report(zip_name, server_url, allure_results_dir):
     except Exception as e:
         print(f"An error occurred while uploading the file: {e}")
 
+def set_zip_file_name_to_project_id(allure_path):
+    global zip_file_name
+    try:
+        if allure_path.exists():
+            path = allure_path.joinpath("data", "test-cases")
+            if path.exists():
+                for file in path.iterdir():
+                    if file.is_file() and file.suffix == ".json":
+                        file_text = file.read_text(encoding="utf-8")
+                        data = json.loads(file_text)
+                        labels = data.get("labels", "")
+                        for label in labels:
+                            if label.get("name") == "project_id":
+                                zip_file_name = label.get("value")
+                                break
+                        break
+    finally:
+        if zip_file_name == "":
+            zip_file_name = "report"
 
 
 @pytest.hookimpl()
 def pytest_sessionfinish(session, exitstatus):
-    if not session.config.getoption('report'):
+    if not session.config.getoption('upload'):
         return
     global zip_file_name
+
     allure_results_dir = Path(get_settings().ALLURE_RESULTS_DIR)
+    if not session.config.getoption('report'):
+        set_zip_file_name_to_project_id(allure_results_dir)
     zip_file_name += ".zip"
     upload_allure_report(zip_file_name, get_settings().SERVER_URL, allure_results_dir)
 
