@@ -39,13 +39,13 @@ class TreeNode:
     def generate_parametrize_decorators(self):
         decorators = []
         for param in self.parameters:
-            decorators.append(f'@pytest.mark.parametrize("{param.name}", {param.value})')
+            decorators.append(f'@pytest.mark.parametrize("{param.name.replace(" ", "_")}", {param.value})')
         return decorators
 
     def get_parameters_names(self):
         names : str = ""
         for param in self.parameters:
-            names += f"{param.name},"
+            names += f"{param.name.replace(" ", "_")},"
         return names[:-1]
 
     def serialize(self):
