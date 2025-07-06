@@ -41,7 +41,7 @@ def get_existing_structure(tests_path: Path, matches) -> TestStructure:
             continue
         rel_path = Path(root).relative_to(tests_path)
         if str(rel_path) != '.':
-            folders.add(str(rel_path))
+            folders.add(str(rel_path).lower())
         for filename in filenames:
             if filename.startswith('test_') and filename.endswith('.py'):
                 abs_file_path = Path(root) / filename
@@ -67,7 +67,7 @@ def get_expected_structure(reqif_path: str, matches, ignore_dir : Path) -> TestS
         if node.type == "_RequirementType":
             folder_name = sanitize_name(node.label)
             if not matches or not matches(str(ignore_dir) + "\\" + str(current_path / folder_name)):
-                folders.add(str(current_path / folder_name))
+                folders.add(str(current_path / folder_name).lower())
             for child in node.children:
                 process_node(child, current_path / folder_name)
         elif node.type == "_TestType":
@@ -75,7 +75,7 @@ def get_expected_structure(reqif_path: str, matches, ignore_dir : Path) -> TestS
             file_path = str(current_path / file_name)
             if matches and matches(str(ignore_dir) + "\\" + file_path):
                 return
-            files.add(file_path)
+            files.add(file_path.lower())
             test_cases[file_path] = {
                 sanitize_name(child.label.lower()): get_test_params(child)
                 for child in node.children
@@ -124,7 +124,7 @@ def parse_test_file(file_path: Path, rel_file_path: Path) -> (Dict[str, Dict], [
                                     params['parameters'] = {}
                                 params['parameters'][param_name] = param_values
                         elif marker_name == 'skip':
-                            skipped_cases.append(str(rel_file_path) + "\\" + node.name[5:])
+                            skipped_cases.append((str(rel_file_path) + "\\" + node.name[5:]).lower())
 
 
             test_cases[node.name[5:]] = params
@@ -156,17 +156,38 @@ def compare_structures(existing: TestStructure, expected: TestStructure) -> Diff
                 pass
         return value
 
+    expected_folders = set(map(str.lower, expected.folders))
+    existing_folders = set(map(str.lower, existing.folders))
+    expected_files = set(map(str.lower, expected.files))
+    existing_files = set(map(str.lower, existing.files))
+
+    expected_test_cases = {
+        file.lower(): {
+            name.lower(): data for name, data in tests.items()
+        }
+        for file, tests in expected.test_cases.items()
+    }
+    existing_test_cases = {
+        file.lower(): {
+            name.lower(): data for name, data in tests.items()
+        }
+        for file, tests in existing.test_cases.items()
+    }
+
     modified_tests = {}
-    for file in expected.files & existing.files:
+    files_to_compare = expected_files & existing_files
+
+    for file in files_to_compare:
         file_changes = {}
+
         existing_tests_by_id = {
-            test_data.get('id'): (name, test_data)  # 'name' is the function name (dict key)
-            for name, test_data in existing.test_cases.get(file, {}).items()
+            test_data.get('id'): (name, test_data)
+            for name, test_data in existing_test_cases.get(file, {}).items()
             if test_data.get('id') is not None
         }
         expected_tests_by_id = {
-            test_data.get('id'): (name, test_data)  # 'name' is the function name (dict key)
-            for name, test_data in expected.test_cases[file].items()
+            test_data.get('id'): (name, test_data)
+            for name, test_data in expected_test_cases.get(file, {}).items()
             if test_data.get('id') is not None
         }
 
@@ -201,26 +222,31 @@ def compare_structures(existing: TestStructure, expected: TestStructure) -> Diff
         if file_changes:
             modified_tests[file] = file_changes
 
-    return Difference(
-        missing_folders=expected.folders - existing.folders,
-        extra_folders=existing.folders - expected.folders,
-        missing_files=expected.files - existing.files,
-        extra_files=existing.files - expected.files,
-        missing_tests={
-            file: {name: expected.test_cases[file][name]
-                   for name in expected.test_cases[file].keys()
-                   if file not in existing.test_cases or
-                   name not in existing.test_cases.get(file, {})}
-            for file in expected.test_cases
-        },
-        extra_tests={
-            file: {name: existing.test_cases[file][name]
-                   for name in existing.test_cases[file].keys()
-                   if file not in expected.test_cases or
-                   name not in expected.test_cases[file]}
-            for file in existing.files
-        },
+    missing_tests = {
+        file: {
+            name: expected_test_cases[file][name]
+            for name in expected_test_cases[file]
+            if file not in existing_test_cases or name not in existing_test_cases[file]
+        }
+        for file in expected_test_cases
+    }
 
+    extra_tests = {
+        file: {
+            name: existing_test_cases[file][name]
+            for name in existing_test_cases[file]
+            if file not in expected_test_cases or name not in expected_test_cases[file]
+        }
+        for file in existing_test_cases
+    }
+
+    return Difference(
+        missing_folders=expected_folders - existing_folders,
+        extra_folders=existing_folders - expected_folders,
+        missing_files=expected_files - existing_files,
+        extra_files=existing_files - expected_files,
+        missing_tests=missing_tests,
+        extra_tests=extra_tests,
         modified_tests=modified_tests,
     )
 
