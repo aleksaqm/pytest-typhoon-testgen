@@ -31,7 +31,8 @@ setup(
         'console_scripts': [
             'typhoon_testgen = testgen.generator:main',
             'coverage_check = testgen.coverage_check:main',
-            'typhoon_test_update = testgen.update_tests:main'
+            'typhoon_test_update = testgen.update_tests:main',
+            'upload_report = testgen.upload_report:main'
         ]
     }
 )
