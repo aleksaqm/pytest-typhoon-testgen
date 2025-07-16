@@ -44,7 +44,7 @@ import pytest
 
 {% for case in test_cases -%}
 @pytest.mark.project_id("{{ project_id }}")
-@pytest.mark.meta(id="{{ case.id }}", scenario="{{ case.description }}", steps="{{ case.steps }}", prerequisites="{{ case.prerequisites }}")
+@pytest.mark.meta(id="{{ case.id }}", scenario="{{ case.description }}", steps={{ case.steps }}, prerequisites={{ case.prerequisites }})
 {% for decorator in case.generate_parametrize_decorators() -%}
 {{ decorator }}
 {% endfor -%}
